@@ -1,0 +1,70 @@
+---
+title: 'Homework 04: Tidy data and joins'
+author: "Roger Yu-Hsiang Lo"
+date: '2018-10-09'
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, fig.align = 'center')
+```
+
+## Bring rectangular data in
+
+- Load the `Gapminder`, `tidyverse`, and `GGally`:
+```{r, warning = FALSE}
+#install.packages("GGally")
+library(gapminder)
+library(tidyverse)
+library(GGally)
+```
+
+- Some sanity check to make sure the `Gapminder` data was loaded properly:
+```{r}
+head(gapminder) %>%
+  knitr::kable(.)
+```
+
+## Data reshaping
+
+The life expectancy of three Asian countries (i.e., Japan, South Korea, and Taiwan) and three African countries (i.e., Benin, Ghana, and Togo) over the years is tabulated below:
+
+```{r}
+gapminder %>%
+  filter(country %in% c("Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo")) %>%
+  select(country, year, lifeExp) %>%
+  spread(key = country, value = lifeExp) %>%
+  select(year, "Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo") %>%  # Reorder the columns
+  knitr::kable()
+```
+
+We can see the correlation of life expectancy between different countries by using a correlation plot:
+
+```{r}
+gapminder %>%
+  filter(country %in% c("Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo")) %>%
+  select(country, year, lifeExp) %>%
+  spread(key = country, value = lifeExp) %>%
+  select(year, "Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo") %>%
+  ggpairs(data = ., columns = 2:7)
+```
+
+As shown in the plot, life expectancy over the years is highly correlated across different countries, even countries in different continents.
+
+## Data join
+
+
+
+
+
+
+
+
+
+
+
+
+
