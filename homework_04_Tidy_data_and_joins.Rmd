@@ -30,6 +30,8 @@ head(gapminder) %>%
 
 ## Data reshaping
 
+### Life expectancy from a few countries over the years
+
 The life expectancy of three Asian countries (i.e., Japan, South Korea, and Taiwan) and three African countries (i.e., Benin, Ghana, and Togo) over the years is tabulated below:
 
 ```{r}
@@ -49,10 +51,47 @@ gapminder %>%
   select(country, year, lifeExp) %>%
   spread(key = country, value = lifeExp) %>%
   select(year, "Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo") %>%
-  ggpairs(data = ., columns = 2:7)
+  ggpairs(data = ., columns = 2:7) + theme_bw()
 ```
 
 As shown in the plot, life expectancy over the years is highly correlated across different countries, even countries in different continents.
+
+### Life expectancy growth in different continents
+
+Let us compare the five-year growth in life expectancy (since the data were sampled every five years) in different continents.
+
+```{r}
+gapminder %>%
+  group_by(country) %>%
+  mutate(growth_lifeExp = lifeExp - lag(lifeExp)) %>%  # Calculate the growth compared to the previous year
+  filter(year != 1952, continent != "Oceania") %>%  # Remove NA values and data from Oceania
+  ungroup() %>%
+  group_by(year, continent) %>%
+  summarize(mdn_grt_lifeExp = median(growth_lifeExp)) %>%  # Calculate the median
+  spread(key = continent, value = mdn_grt_lifeExp) %>%
+  knitr::kable(.)
+```
+
+We can already see a rough trend from the table: the growth in life expectancy decreased slightly over the years across continents. The trend becomes more "visible" when the data are plotted.
+
+```{r}
+gapminder %>%
+  group_by(country) %>%
+  mutate(growth_lifeExp = lifeExp - lag(lifeExp)) %>%  # Calculate the growth compared to the previous year
+  filter(year != 1952, continent != "Oceania") %>%  # Remove NA values and data from Oceania
+  ungroup() %>%
+  group_by(year, continent) %>%
+  ggplot(aes(x = year, y = growth_lifeExp, color = continent)) +
+  facet_wrap(~continent) + 
+  geom_jitter(alpha = 0.1) +
+  geom_smooth(method = "lm") +  # Fit regression lines
+  scale_x_continuous(breaks = seq(1957, 2007, 10)) +
+  coord_cartesian(ylim=c(-2, 4)) +
+  labs(x = 'Year', y = 'Life expectancy growth (years)') +
+  theme(legend.position = "none")
+```
+
+As shown in the plot, the growth in life expectancy decreased gradually across the four continents. We can also see some differences between continents. Around 1960, the growth is biggest in Asia and smallest in Europe. In addition, there is quite some variation in Africa, compared with Europe or Americas in general, as indicated by the width of the gray ribbons.
 
 ## Data join
 

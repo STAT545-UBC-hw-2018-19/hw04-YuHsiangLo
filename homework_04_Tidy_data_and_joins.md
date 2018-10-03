@@ -38,6 +38,8 @@ head(gapminder) %>%
 Data reshaping
 --------------
 
+### Life expectancy from a few countries over the years
+
 The life expectancy of three Asian countries (i.e., Japan, South Korea, and Taiwan) and three African countries (i.e., Benin, Ghana, and Togo) over the years is tabulated below:
 
 ``` r
@@ -72,12 +74,65 @@ gapminder %>%
   select(country, year, lifeExp) %>%
   spread(key = country, value = lifeExp) %>%
   select(year, "Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo") %>%
-  ggpairs(data = ., columns = 2:7)
+  ggpairs(data = ., columns = 2:7) + theme_bw()
 ```
 
 <img src="homework_04_Tidy_data_and_joins_files/figure-markdown_github/unnamed-chunk-4-1.png" style="display: block; margin: auto;" />
 
 As shown in the plot, life expectancy over the years is highly correlated across different countries, even countries in different continents.
+
+### Life expectancy growth in different continents
+
+Let us compare the five-year growth in life expectancy (since the data were sampled every five years) in different continents.
+
+``` r
+gapminder %>%
+  group_by(country) %>%
+  mutate(growth_lifeExp = lifeExp - lag(lifeExp)) %>%  # Calculate the growth compared to the previous year
+  filter(year != 1952, continent != "Oceania") %>%  # Remove NA values and data from Oceania
+  ungroup() %>%
+  group_by(year, continent) %>%
+  summarize(mdn_grt_lifeExp = median(growth_lifeExp)) %>%  # Calculate the median
+  spread(key = continent, value = mdn_grt_lifeExp) %>%
+  knitr::kable(.)
+```
+
+|  year|  Africa|  Americas|   Asia|  Europe|
+|-----:|-------:|---------:|------:|-------:|
+|  1957|  2.0175|     2.819|  2.782|  1.9300|
+|  1962|  2.0025|     2.816|  2.575|  1.5650|
+|  1967|  1.9920|     2.100|  2.700|  0.9750|
+|  1972|  2.0920|     2.118|  2.501|  0.7800|
+|  1977|  2.0545|     2.157|  2.246|  1.2650|
+|  1982|  1.9910|     1.791|  2.115|  0.9300|
+|  1987|  1.8925|     1.633|  2.087|  0.8735|
+|  1992|  1.1700|     1.094|  1.851|  0.8450|
+|  1997|  0.9245|     1.547|  1.370|  1.1665|
+|  2002|  1.0135|     1.199|  1.409|  1.2515|
+|  2007|  1.5625|     1.077|  1.410|  0.9375|
+
+We can already see a rough trend from the table: the growth in life expectancy decreased slightly over the years across continents. The trend becomes more "visible" when the data are plotted.
+
+``` r
+gapminder %>%
+  group_by(country) %>%
+  mutate(growth_lifeExp = lifeExp - lag(lifeExp)) %>%  # Calculate the growth compared to the previous year
+  filter(year != 1952, continent != "Oceania") %>%  # Remove NA values and data from Oceania
+  ungroup() %>%
+  group_by(year, continent) %>%
+  ggplot(aes(x = year, y = growth_lifeExp, color = continent)) +
+  facet_wrap(~continent) + 
+  geom_jitter(alpha = 0.1) +
+  geom_smooth(method = "lm") +  # Fit regression lines
+  scale_x_continuous(breaks = seq(1957, 2007, 10)) +
+  coord_cartesian(ylim=c(-2, 4)) +
+  labs(x = 'Year', y = 'Life expectancy growth (years)') +
+  theme(legend.position = "none")
+```
+
+<img src="homework_04_Tidy_data_and_joins_files/figure-markdown_github/unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
+
+As shown in the plot, the growth in life expectancy decreased gradually across the four continents. We can also see some differences between continents. Around 1960, the growth is biggest in Asia and smallest in Europe. In addition, there is quite some variation in Africa, compared with Europe or Americas in general, as indicated by the width of the gray ribbons.
 
 Data join
 ---------
