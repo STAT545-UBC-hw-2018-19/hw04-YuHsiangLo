@@ -5,27 +5,25 @@ date: '2018-10-09'
 output:
   github_document:
     toc: true
-    toc_depth: 2
+    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, fig.align = 'center')
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.align = 'center')
 ```
 
 ## Bring rectangular data in
 
-- Load the `Gapminder`, `tidyverse`, and `GGally`:
-```{r, warning = FALSE}
-#install.packages("GGally")
+- Load `Gapminder` and `tidyverse`:
+```{r}
 library(gapminder)
 library(tidyverse)
-library(GGally)
 ```
 
 - Some sanity check to make sure the `Gapminder` data was loaded properly:
 ```{r}
 head(gapminder) %>%
-  knitr::kable(.)
+  knitr::kable()
 ```
 
 ## Data reshaping
@@ -43,15 +41,22 @@ gapminder %>%
   knitr::kable()
 ```
 
-We can see the correlation of life expectancy between different countries by using a correlation plot:
+We can see the correlation of life expectancy between different countries by using a correlation plot from `GGally`:
 
 ```{r}
+#install.packages("GGally")
+library(GGally)
+
 gapminder %>%
   filter(country %in% c("Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo")) %>%
   select(country, year, lifeExp) %>%
   spread(key = country, value = lifeExp) %>%
   select(year, "Japan", "Korea, Rep.", "Taiwan", "Benin", "Ghana", "Togo") %>%
-  ggpairs(data = ., columns = 2:7) + theme_bw()
+  ggpairs(columns = 2:7) +
+  theme_bw() +
+  labs(title = "Correlation plot between countries") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
 ```
 
 As shown in the plot, life expectancy over the years is highly correlated across different countries, even countries in different continents.
@@ -69,7 +74,7 @@ gapminder %>%
   group_by(year, continent) %>%
   summarize(mdn_grt_lifeExp = median(growth_lifeExp)) %>%  # Calculate the median
   spread(key = continent, value = mdn_grt_lifeExp) %>%
-  knitr::kable(.)
+  knitr::kable()
 ```
 
 We can already see a rough trend from the table: the growth in life expectancy decreased slightly over the years across continents. The trend becomes more "visible" when the data are plotted.
@@ -87,23 +92,52 @@ gapminder %>%
   geom_smooth(method = "lm") +  # Fit regression lines
   scale_x_continuous(breaks = seq(1957, 2007, 10)) +
   coord_cartesian(ylim=c(-2, 4)) +
-  labs(x = 'Year', y = 'Life expectancy growth (years)') +
-  theme(legend.position = "none")
+  labs(title = "Life expectancy change over years", x = 'Year', y = 'Life expectancy growth (years)') +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
 ```
 
 As shown in the plot, the growth in life expectancy decreased gradually across the four continents. We can also see some differences between continents. Around 1960, the growth is biggest in Asia and smallest in Europe. In addition, there is quite some variation in Africa, compared with Europe or Americas in general, as indicated by the width of the gray ribbons.
 
 ## Data join
 
+### Life expectancy and population in 50 years
 
+Let us try to show the data on a map. To do this, we need to first import the package `ggmap`. The data (`country_geo_info.txt`) of the longitude and latitude of different countries are obtained from [here](https://opendata.socrata.com/dataset/Country-List-ISO-3166-Codes-Latitude-Longitude/mnkm-8ram). The ISO code of each country can be found in the data frame `country_codes` that is loaded along with `Gapminder`.
 
+In what follows, the information about the population and life expectancy of each country in 1957 and 2007 is plotted on a world map.
 
+```{r, fig.width = 12, fig.height = 4}
+library(ggmap)
 
+# Read in the data that contain longitude and latitude information
+country_info <- read.csv("country_geo_info.txt", header = TRUE, sep = "\t")
 
+# Remove variables that we do not need
+country_info <- country_info %>%
+  select(iso_num, latitude, longitude)
 
+# Extract variables from country_codes that we need
+country_iso_num <- country_codes %>%
+  select(country, iso_num)
 
+gapminder %>%
+  filter(year %in% c(1957, 2007)) %>%  # Get entries from 1957 and 2007
+  left_join(., country_iso_num, by = "country") %>%  # Add a column with iso code for each country
+  left_join(., country_info, by = "iso_num") %>%  # Add two columns: latitude, longitude
+  ggplot(aes(x = longitude, y = latitude, size = pop, color = lifeExp)) +
+  theme_bw() +  # Change theme
+  facet_wrap(~ year) +
+  borders("world", colour = "gray80", fill = "gray75") +  # Add a gray world map in the background
+  geom_point() +  # The size of points represents pop, and the color the life expectancy
+  scale_size_area() +  # Make the size of points corresponds to pop
+  scale_size_continuous(name = "Population") +
+  scale_color_continuous(name = "Life exp.") +
+  labs(title = "Population and life expectancy in 1957 and 2007") +
+  theme(plot.title = element_text(hjust = 0.5),  # Center the title
+        axis.title = element_blank(),  # Remove axis labels and ticks
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
+```
 
-
-
-
-
+Comparing the two maps, it is easy to see that both population and life expectancy increased over time in each continent, with a significant improvement of life expectancy in Asia and South America.
